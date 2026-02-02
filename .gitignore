@@ -48,3 +48,6 @@ next-env.d.ts
 
 # agents
 .agents/
+/src/generated/prisma
+
+/src/generated/prisma

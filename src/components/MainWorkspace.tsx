@@ -9,6 +9,12 @@ import { useMcpServers } from '@/components/tambo/mcp-config-modal'
 import { components, tools } from '@/lib/tambo'
 import type { User } from '@supabase/supabase-js'
 
+// Import interactable components
+import { InteractableCollections } from './interactable/Collections'
+import { InteractableCalendar } from './interactable/Calendar'
+import { InteractableNotes } from './interactable/Notes'
+import { InteractableImageStudio } from './interactable/ImageStudio'
+
 type WorkspaceView = 'search' | 'collections' | 'calendar' | 'notes' | 'studio'
 
 interface MainWorkspaceProps {
@@ -42,39 +48,22 @@ export function MainWorkspace({ user }: MainWorkspaceProps) {
           )}
 
           {activeView === 'collections' && (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <p className="text-lg font-medium">Collections View</p>
-                <p className="text-sm mt-2">Coming soon in Phase 4</p>
-              </div>
-            </div>
+            <InteractableCollections collections={[]} />
           )}
 
           {activeView === 'calendar' && (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <p className="text-lg font-medium">Calendar View</p>
-                <p className="text-sm mt-2">Coming soon in Phase 4</p>
-              </div>
-            </div>
+            <InteractableCalendar events={[]} />
           )}
 
           {activeView === 'notes' && (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <p className="text-lg font-medium">Notes View</p>
-                <p className="text-sm mt-2">Coming soon in Phase 4</p>
-              </div>
-            </div>
+            <InteractableNotes notes={[]} />
           )}
 
           {activeView === 'studio' && (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <p className="text-lg font-medium">Image Studio</p>
-                <p className="text-sm mt-2">Coming soon in Phase 4</p>
-              </div>
-            </div>
+            <InteractableImageStudio 
+              variations={[]}
+              currentPrompt=""
+            />
           )}
         </div>
       </div>

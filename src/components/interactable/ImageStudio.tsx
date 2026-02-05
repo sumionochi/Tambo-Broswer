@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { Image as ImageIcon, Download, Trash2, RefreshCw } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 export const ImageStudioPropsSchema = z.object({
   variations: z.array(z.string()).describe("Array of generated image URLs or base64 data"),
@@ -146,20 +147,37 @@ function ImageStudio({ variations: initialVariations, currentPrompt }: ImageStud
   return (
     <>
       <div className="p-6 space-y-6 overflow-y-auto h-full">
+        {/* Header with EditWithTamboButton */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Image Studio</h2>
-            <p className="text-sm text-gray-500 mt-1">{images.length} generated images</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {images.length} generation{images.length !== 1 ? 's' : ''}
+            </p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-            title="Refresh studio"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <EditWithTamboButton 
+              tooltip="Edit images with AI"
+              description="Regenerate variations, modify images, or create new edits using natural language"
+            />
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+              title="Refresh studio"
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
+
+        {/* Current Prompt */}
+        {currentPrompt && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-purple-900 mb-1">Current Edit Prompt:</p>
+            <p className="text-purple-800">{currentPrompt}</p>
+          </div>
+        )}
 
         {/* Image Sessions */}
         <div className="space-y-8">
@@ -225,6 +243,11 @@ function ImageStudio({ variations: initialVariations, currentPrompt }: ImageStud
                         >
                           <Download size={18} />
                         </button>
+                      </div>
+
+                      {/* Image Number Badge */}
+                      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
+                        #{index + 1}
                       </div>
                     </div>
                   ))}

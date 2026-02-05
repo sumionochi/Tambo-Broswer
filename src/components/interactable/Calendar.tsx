@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { Calendar as CalendarIcon, Clock, Trash2, CheckCircle, RefreshCw, Edit2, Check, X } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 // Zod Schema
 export const CalendarPropsSchema = z.object({
@@ -207,19 +208,26 @@ function Calendar({ events: initialEvents }: CalendarProps) {
   return (
     <>
       <div className="p-6 space-y-6 overflow-y-auto h-full">
+        {/* Header with EditWithTamboButton */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">My Calendar</h2>
             <p className="text-sm text-gray-500 mt-1">{upcomingEvents.length} upcoming</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-            title="Refresh calendar"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <EditWithTamboButton 
+              tooltip="Edit calendar with AI"
+              description="Reschedule, modify, or manage your events and reminders using natural language"
+            />
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+              title="Refresh calendar"
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
         {/* Upcoming Events */}

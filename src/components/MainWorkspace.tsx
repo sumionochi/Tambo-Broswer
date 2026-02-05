@@ -3,7 +3,7 @@
 
 import { TamboProvider } from '@tambo-ai/react'
 import { useState } from 'react'
-import { ControlBar } from './layout/ControlBar'
+import { NavigationBar } from './layout/NavigationBar'
 import { MessageThreadFull } from '@/components/tambo/message-thread-full'
 import { useMcpServers } from '@/components/tambo/mcp-config-modal'
 import { components, tools } from '@/lib/tambo'
@@ -34,7 +34,7 @@ export function MainWorkspace({ user }: MainWorkspaceProps) {
       mcpServers={mcpServers}
     >
       <div className="flex flex-col h-screen bg-gray-50">
-        <ControlBar
+        <NavigationBar
           activeView={activeView}
           onViewChange={setActiveView}
           userEmail={user.email!}

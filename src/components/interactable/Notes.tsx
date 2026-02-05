@@ -7,6 +7,7 @@ import { FileText, Trash2, Link as LinkIcon, RefreshCw, ExternalLink, Edit2, Che
 import { useState, useEffect, useRef } from 'react'
 import { SearchHistoryDialog } from '@/components/dialog/SearchHistoryDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 // Zod Schema
 export const NotesPropsSchema = z.object({
@@ -174,19 +175,26 @@ function Notes({ notes: initialNotes }: NotesProps) {
   return (
     <>
       <div className="p-6 space-y-4 overflow-y-auto h-full">
+        {/* Header with EditWithTamboButton */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">My Notes</h2>
             <p className="text-sm text-gray-500 mt-1">{safeNotes.length} notes</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-            title="Refresh notes"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <EditWithTamboButton 
+              tooltip="Edit notes with AI"
+              description="Summarize, rewrite, organize, or manage your notes using natural language"
+            />
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+              title="Refresh notes"
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

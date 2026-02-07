@@ -11,16 +11,22 @@ import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 // Zod Schema
 export const CalendarPropsSchema = z.object({
-  events: z.array(z.object({
-    id: z.string(),
-    title: z.string().describe("Event title"),
-    datetime: z.string().describe("ISO datetime string"),
-    linkedCollection: z.string().optional().describe("ID of linked collection"),
-    linkedItems: z.array(z.string()).optional().describe("IDs of linked items"),
-    note: z.string().optional().describe("Additional notes"),
-    completed: z.boolean().optional().describe("Whether event is completed"),
-  }))
-})
+    events: z.array(z.object({
+      id: z.string().nullable().default(''),
+      title: z.string().nullable().default('').describe("Event title"),
+      datetime: z.string().nullable().default('').describe("ISO datetime string"),
+      linkedCollection: z.string().optional().describe("ID of linked collection"),
+      linkedItems: z.array(z.string()).optional().describe("IDs of linked items"),
+      note: z.string().optional().describe("Additional notes"),
+      completed: z.boolean().optional().describe("Whether event is completed"),
+    })).nullable().optional()
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pCalendar = CalendarPropsSchema.parse.bind(CalendarPropsSchema);
+const _spCalendar = CalendarPropsSchema.safeParse.bind(CalendarPropsSchema);
+(CalendarPropsSchema as any).parse = (d: unknown, p?: any) => _pCalendar(d ?? {}, p);
+(CalendarPropsSchema as any).safeParse = (d: unknown, p?: any) => _spCalendar(d ?? {}, p);
 
 type CalendarProps = z.infer<typeof CalendarPropsSchema>
 
@@ -100,7 +106,7 @@ function Calendar({ events: initialEvents }: CalendarProps) {
     } catch (error) { console.error('Update event error:', error) }
   }
 
-  const sortedEvents = [...safeEvents].sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+  const sortedEvents = [...safeEvents].sort((a, b) => new Date(a.datetime || 0).getTime() - new Date(b.datetime || 0).getTime())
   const upcomingEvents = sortedEvents.filter(e => !e.completed)
   const completedEvents = sortedEvents.filter(e => e.completed)
 
@@ -172,8 +178,8 @@ function Calendar({ events: initialEvents }: CalendarProps) {
               Upcoming
             </h3>
             <div className="space-y-3 fs-stagger">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} editingEvent={editingEvent}
+              {upcomingEvents.map((event, idx) => (
+                <EventCard key={event.id || idx} event={event} editingEvent={editingEvent}
                   onEditChange={setEditingEvent} onCancelEdit={() => setEditingEvent(null)}
                   onSaveEdit={handleUpdateEvent}
                   onDelete={(id, title) => setConfirmDialog({ isOpen: true, eventId: id, eventTitle: title })}
@@ -191,8 +197,8 @@ function Calendar({ events: initialEvents }: CalendarProps) {
               Completed
             </h3>
             <div className="space-y-3 fs-stagger">
-              {completedEvents.map((event) => (
-                <EventCard key={event.id} event={event} editingEvent={editingEvent}
+              {completedEvents.map((event, idx) => (
+                <EventCard key={event.id || idx} event={event} editingEvent={editingEvent}
                   onEditChange={setEditingEvent} onCancelEdit={() => setEditingEvent(null)}
                   onSaveEdit={handleUpdateEvent}
                   onDelete={(id, title) => setConfirmDialog({ isOpen: true, eventId: id, eventTitle: title })}
@@ -220,7 +226,7 @@ function EventCard({ event, editingEvent, onEditChange, onCancelEdit, onSaveEdit
   onSaveEdit: (id: string, updates: Partial<EditingEvent>) => void;
   onDelete: (id: string, title: string) => void; onToggleComplete: (id: string) => void;
 }) {
-  const eventDate = new Date(event.datetime)
+  const eventDate = new Date(event.datetime || '')
   const isToday = eventDate.toDateString() === new Date().toDateString()
   const isEditing = editingEvent?.id === event.id
 
@@ -274,7 +280,7 @@ function EventCard({ event, editingEvent, onEditChange, onCancelEdit, onSaveEdit
               placeholder="Add a note..." />
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <button onClick={() => { if (editingEvent.title.trim()) onSaveEdit(event.id, { title: editingEvent.title.trim(), datetime: editingEvent.datetime, note: editingEvent.note }) }}
+            <button onClick={() => { if (editingEvent.title.trim()) onSaveEdit(event.id || '', { title: editingEvent.title.trim(), datetime: editingEvent.datetime, note: editingEvent.note }) }}
               className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 rounded-xl transition-all"
               style={{ background: 'var(--fs-sage-600)', color: 'white', transitionDuration: 'var(--fs-duration-fast)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--fs-sage-700)' }}
@@ -299,7 +305,7 @@ function EventCard({ event, editingEvent, onEditChange, onCancelEdit, onSaveEdit
                 color: event.completed ? 'var(--fs-text-muted)' : 'var(--fs-text-primary)',
                 textDecoration: event.completed ? 'line-through' : 'none',
               }}>
-                {event.title}
+                {event.title || 'Untitled'}
               </h4>
               {isToday && !event.completed && (
                 <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-lg"
@@ -336,14 +342,14 @@ function EventCard({ event, editingEvent, onEditChange, onCancelEdit, onSaveEdit
           <div className="flex items-center gap-1 shrink-0 ml-3 opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ transitionDuration: 'var(--fs-duration-normal)' }}>
             <ActionBtn icon={Edit2} tooltip="Edit"
-              onClick={() => onEditChange({ id: event.id, title: event.title, datetime: event.datetime, note: event.note || '' })}
+              onClick={() => onEditChange({ id: event.id || '', title: event.title || '', datetime: event.datetime || '', note: event.note || '' })}
               hoverColor="var(--fs-sage-600)" hoverBg="var(--fs-sage-50)" />
             <ActionBtn icon={CheckCircle} tooltip={event.completed ? 'Mark incomplete' : 'Mark complete'}
-              onClick={() => onToggleComplete(event.id)}
+              onClick={() => onToggleComplete(event.id || '')}
               baseColor={event.completed ? 'var(--fs-sage-600)' : undefined}
               hoverColor="var(--fs-sage-600)" hoverBg="var(--fs-sage-50)" />
             <ActionBtn icon={Trash2} tooltip="Delete"
-              onClick={() => onDelete(event.id, event.title)}
+              onClick={() => onDelete(event.id || '', event.title || '')}
               hoverColor="#DC2626" hoverBg="#FEF2F2" />
           </div>
         </div>

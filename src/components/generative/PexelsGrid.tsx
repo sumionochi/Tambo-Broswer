@@ -12,12 +12,15 @@ import {
 import { ImageEditDialog } from '@/components/dialog/ImageEditDialog'
 import { QuickActionDialog } from '@/components/dialog/QuickActionDialog'
 
-export const PexelsGridPropsSchema = z.object({
-  searchRequest: z.object({
-    query: z.string().describe('Search query for images'),
-    perPage: z.number().optional().describe('Number of images to fetch'),
-  }).describe('Image search parameters'),
-})
+export const PexelsGridPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    searchRequest: z.object({
+      query: z.string().nullable().default('').describe('Search query for images'),
+      perPage: z.number().optional().describe('Number of images to fetch'),
+    }).nullable().optional().describe('Image search parameters'),
+  })
+)
 
 type PexelsGridProps = z.infer<typeof PexelsGridPropsSchema>
 
@@ -127,7 +130,7 @@ export function PexelsGrid({ searchRequest }: PexelsGridProps) {
           <ImageIcon size={28} style={{ color: 'var(--fs-sage-400)' }} strokeWidth={1.5} />
         </div>
         <p className="font-semibold text-lg" style={{ color: 'var(--fs-text-primary)', fontFamily: "'Fraunces', serif" }}>No images found</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search for &ldquo;{searchRequest.query}&rdquo;</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search for &ldquo;{searchRequest?.query}&rdquo;</p>
       </div>
     )
   }
@@ -147,7 +150,7 @@ export function PexelsGrid({ searchRequest }: PexelsGridProps) {
             </h3>
             <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>
               <span className="font-semibold" style={{ color: 'var(--fs-text-primary)' }}>{photos.length}</span> photos for{' '}
-              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest.query}&rdquo;</span>
+              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest?.query}&rdquo;</span>
             </p>
           </div>
           <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--fs-text-muted)' }}>
@@ -180,7 +183,7 @@ export function PexelsGrid({ searchRequest }: PexelsGridProps) {
                   </div>
 
                   {hasError ? (
-                    <div className="w-full aspect-[3/4] flex flex-col items-center justify-center" style={{ background: 'var(--fs-cream-200)', color: 'var(--fs-text-muted)' }}>
+                    <div className="w-full aspect-3/4 flex flex-col items-center justify-center" style={{ background: 'var(--fs-cream-200)', color: 'var(--fs-text-muted)' }}>
                       <AlertCircle size={28} className="mb-2" style={{ color: 'var(--fs-text-muted)' }} />
                       <p className="text-xs">Image unavailable</p>
                       <a href={photo.url} target="_blank" rel="noopener noreferrer"

@@ -10,9 +10,15 @@ import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 export const ImageStudioPropsSchema = z.object({
-  variations: z.array(z.string()).describe("Array of generated image URLs or base64 data"),
-  currentPrompt: z.string().optional().describe("The prompt used to generate variations"),
-})
+    variations: z.array(z.string().nullable().default('')).nullable().optional().default([]).describe("Array of generated image URLs or base64 data"),
+    currentPrompt: z.string().optional().nullable().describe("The prompt used to generate variations"),
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pImageStudio = ImageStudioPropsSchema.parse.bind(ImageStudioPropsSchema);
+const _spImageStudio = ImageStudioPropsSchema.safeParse.bind(ImageStudioPropsSchema);
+(ImageStudioPropsSchema as any).parse = (d: unknown, p?: any) => _pImageStudio(d ?? {}, p);
+(ImageStudioPropsSchema as any).safeParse = (d: unknown, p?: any) => _spImageStudio(d ?? {}, p);
 
 type ImageStudioProps = z.infer<typeof ImageStudioPropsSchema>
 

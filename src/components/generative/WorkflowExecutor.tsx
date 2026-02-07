@@ -10,13 +10,16 @@ import {
   Clock, Zap, RotateCcw, StopCircle, ChevronDown, ChevronUp, BarChart3, Sparkles,
 } from 'lucide-react'
 
-export const WorkflowExecutorPropsSchema = z.object({
-  workflowId: z.string().describe('ID of the workflow to track'),
-  steps: z.array(z.object({
-    index: z.number(), type: z.string(), title: z.string(),
-    description: z.string().optional(), status: z.string().optional(),
-  })).optional().describe('Initial step definitions from execute_research_workflow tool'),
-})
+export const WorkflowExecutorPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    workflowId: z.string().nullable().optional().default('').describe('ID of the workflow to track'),
+    steps: z.array(z.object({
+      index: z.number().nullable().optional().default(0), type: z.string().nullable().optional().default(''), title: z.string().nullable().optional().default(''),
+      description: z.string().optional(), status: z.string().optional(),
+    })).optional().describe('Initial step definitions from execute_research_workflow tool'),
+  })
+)
 
 type WorkflowExecutorProps = z.infer<typeof WorkflowExecutorPropsSchema>
 
@@ -81,10 +84,10 @@ export function WorkflowExecutor({ workflowId, steps: initialSteps }: WorkflowEx
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [isStreaming, workflowId, polling, fetchStatus])
 
-  const handleCancel = async () => { try { await fetch(`/api/workflows/${workflowId}/cancel`, { method: 'POST' }); fetchStatus() } catch {} }
-  const handleRetry = async () => { try { await fetch(`/api/workflows/${workflowId}/retry`, { method: 'POST' }); setPolling(true); fetchStatus() } catch {} }
+  const handleCancel = async () => { if (!workflowId) return; try { await fetch(`/api/workflows/${workflowId}/cancel`, { method: 'POST' }); fetchStatus() } catch {} }
+  const handleRetry = async () => { if (!workflowId) return; try { await fetch(`/api/workflows/${workflowId}/retry`, { method: 'POST' }); setPolling(true); fetchStatus() } catch {} }
 
-  const steps: StepStatus[] = workflowStatus?.steps || initialSteps?.map((s) => ({ index: s.index, type: s.type, title: s.title, description: s.description, status: (s.status as StepStatus['status']) || 'pending' })) || []
+  const steps: StepStatus[] = workflowStatus?.steps || initialSteps?.map((s) => ({ index: s.index ?? 0, type: s.type ?? '', title: s.title ?? '', description: s.description, status: (s.status as StepStatus['status']) || 'pending' })) || []
   const status = workflowStatus?.status || 'pending'
   const progress = workflowStatus?.progress || 0
   const title = workflowStatus?.title || 'Research Workflow'

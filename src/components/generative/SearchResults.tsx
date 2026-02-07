@@ -9,14 +9,20 @@ import { ExternalLink, Bookmark, Calendar, FileText, Clock, TrendingUp, Sparkles
 import { QuickActionDialog } from '@/components/dialog/QuickActionDialog'
 
 export const SearchResultsPropsSchema = z.object({
-  searchRequest: z.object({
-    query: z.string().describe("Search query text"),
-    filters: z.object({
-      num: z.number().optional().describe("Number of results"),
-      freshness: z.enum(['day', 'week', 'month']).optional().describe("Freshness filter"),
-    }).optional(),
-  }).describe("Search parameters - component will fetch data"),
-})
+    searchRequest: z.object({
+      query: z.string().nullable().default('').describe("Search query text"),
+      filters: z.object({
+        num: z.number().optional().describe("Number of results"),
+        freshness: z.enum(['day', 'week', 'month']).optional().describe("Freshness filter"),
+      }).optional(),
+    }).nullable().optional().describe("Search parameters - component will fetch data"),
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pSearchResults = SearchResultsPropsSchema.parse.bind(SearchResultsPropsSchema);
+const _spSearchResults = SearchResultsPropsSchema.safeParse.bind(SearchResultsPropsSchema);
+(SearchResultsPropsSchema as any).parse = (d: unknown, p?: any) => _pSearchResults(d ?? {}, p);
+(SearchResultsPropsSchema as any).safeParse = (d: unknown, p?: any) => _spSearchResults(d ?? {}, p);
 
 type SearchResultsProps = z.infer<typeof SearchResultsPropsSchema>
 
@@ -118,7 +124,7 @@ export function SearchResults({ searchRequest }: SearchResultsProps) {
           <SearchIcon size={28} style={{ color: 'var(--fs-sage-400)' }} strokeWidth={1.5} />
         </div>
         <p className="font-semibold text-lg" style={{ color: 'var(--fs-text-primary)', fontFamily: "'Fraunces', serif" }}>No results found</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search query for &ldquo;{searchRequest.query}&rdquo;</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search query for &ldquo;{searchRequest?.query}&rdquo;</p>
       </div>
     )
   }
@@ -136,7 +142,7 @@ export function SearchResults({ searchRequest }: SearchResultsProps) {
             </h3>
             <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>
               Found <span className="font-semibold" style={{ color: 'var(--fs-text-primary)' }}>{results.length}</span> results for{' '}
-              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest.query}&rdquo;</span>
+              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest?.query}&rdquo;</span>
             </p>
           </div>
         </div>
@@ -160,7 +166,7 @@ export function SearchResults({ searchRequest }: SearchResultsProps) {
 
                 {/* Top Result Badge */}
                 {isTopResult && (
-                  <div className="absolute -top-0 -right-0 z-10">
+                  <div className="absolute top-0 right-0 z-10">
                     <div className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-bl-xl flex items-center gap-1"
                       style={{ background: 'var(--fs-sage-600)', color: 'white' }}>
                       <TrendingUp size={10} /> Top {result.position}

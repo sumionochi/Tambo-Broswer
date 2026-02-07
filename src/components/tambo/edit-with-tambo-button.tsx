@@ -281,7 +281,7 @@ export function EditWithTamboButton({
                   onKeyDown={handleKeyDown}
                   placeholder="Describe what you want to change..."
                   className={cn(
-                    "flex min-h-[80px] w-full rounded-md border border-input",
+                    "flex min-h-20 w-full rounded-md border border-input",
                     "bg-transparent px-3 py-2 text-sm shadow-sm",
                     "placeholder:text-muted-foreground resize-none",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",

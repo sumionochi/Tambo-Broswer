@@ -13,19 +13,25 @@ import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 export const ReportsListPropsSchema = z.object({
-  reports: z.array(
-    z.object({
-      id: z.string(),
-      title: z.string().describe('Report title'),
-      summary: z.string().describe('Executive summary'),
-      format: z.string().describe('comparison | analysis | timeline | summary'),
-      sectionCount: z.number().describe('Number of sections'),
-      createdAt: z.string().describe('ISO datetime'),
-      workflowId: z.string().optional().nullable(),
-      sourceCollectionId: z.string().optional().nullable(),
-    })
-  ),
-})
+    reports: z.array(
+      z.object({
+        id: z.string().nullable().default(''),
+        title: z.string().nullable().default('').describe('Report title'),
+        summary: z.string().nullable().default('').describe('Executive summary'),
+        format: z.string().nullable().default('summary').describe('comparison | analysis | timeline | summary'),
+        sectionCount: z.number().nullable().default(0).describe('Number of sections'),
+        createdAt: z.string().nullable().default('').describe('ISO datetime'),
+        workflowId: z.string().optional().nullable(),
+        sourceCollectionId: z.string().optional().nullable(),
+      })
+    ).nullable().optional(),
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pReportsList = ReportsListPropsSchema.parse.bind(ReportsListPropsSchema);
+const _spReportsList = ReportsListPropsSchema.safeParse.bind(ReportsListPropsSchema);
+(ReportsListPropsSchema as any).parse = (d: unknown, p?: any) => _pReportsList(d ?? {}, p);
+(ReportsListPropsSchema as any).safeParse = (d: unknown, p?: any) => _spReportsList(d ?? {}, p);
 
 type ReportsListProps = z.infer<typeof ReportsListPropsSchema>
 
@@ -65,13 +71,13 @@ function ReportsList({ reports: initialReports }: ReportsListProps) {
   }
 
   const handleCopySummary = async (report: any) => {
-    await navigator.clipboard.writeText(`${report.title}\n\n${report.summary}`)
-    setCopiedId(report.id); setTimeout(() => setCopiedId(null), 2000)
+    await navigator.clipboard.writeText(`${report.title || ''}\n\n${report.summary || ''}`)
+    setCopiedId(report.id || ''); setTimeout(() => setCopiedId(null), 2000)
   }
 
   const safeReports = reports ?? []
   const groupedReports = safeReports.reduce((acc, report) => {
-    const format = report.format || 'summary'
+    const format = (report.format || 'summary')
     if (!acc[format]) acc[format] = []
     acc[format].push(report)
     return acc
@@ -140,12 +146,12 @@ function ReportsList({ reports: initialReports }: ReportsListProps) {
         {/* ── Report Cards ── */}
         {safeReports.length > 0 && (
           <div className="space-y-3 fs-stagger">
-            {safeReports.map((report) => {
-              const format = formatConfig[report.format] || formatConfig.summary
+            {safeReports.map((report, index) => {
+              const format = formatConfig[(report.format || 'summary')] || formatConfig.summary
               const FormatIcon = format.icon
 
               return (
-                <div key={report.id} className="rounded-2xl p-5 transition-all group fs-animate-in"
+                <div key={report.id || index} className="rounded-2xl p-5 transition-all group fs-animate-in"
                   style={{ background: 'var(--fs-cream-50)', border: '1px solid var(--fs-border-light)', transitionDuration: 'var(--fs-duration-normal)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--fs-shadow-md)'; e.currentTarget.style.borderColor = 'var(--fs-sage-200)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--fs-border-light)' }}>
@@ -156,21 +162,21 @@ function ReportsList({ reports: initialReports }: ReportsListProps) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold truncate" style={{ color: 'var(--fs-text-primary)' }}>{report.title}</h4>
+                          <h4 className="font-semibold truncate" style={{ color: 'var(--fs-text-primary)' }}>{report.title || 'Untitled'}</h4>
                           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0"
                             style={{ background: format.badgeBg, color: format.badgeColor }}>{format.label}</span>
                         </div>
-                        <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: 'var(--fs-text-secondary)' }}>{report.summary}</p>
+                        <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: 'var(--fs-text-secondary)' }}>{report.summary || ''}</p>
 
                         {/* Meta */}
                         <div className="flex items-center gap-3 mt-3">
                           <span className="text-xs flex items-center gap-1" style={{ color: 'var(--fs-text-muted)' }}>
                             <Clock size={10} strokeWidth={1.8} />
-                            {new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(report.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                           <span className="text-xs flex items-center gap-1" style={{ color: 'var(--fs-text-muted)' }}>
                             <List size={10} strokeWidth={1.8} />
-                            {report.sectionCount} sections
+                            {report.sectionCount || 0} sections
                           </span>
                           {report.workflowId && (
                             <span className="text-xs flex items-center gap-1" style={{ color: 'var(--fs-sage-600)' }}>
@@ -198,7 +204,7 @@ function ReportsList({ reports: initialReports }: ReportsListProps) {
                           ? <CheckCircle2 size={14} style={{ color: 'var(--fs-sage-600)' }} />
                           : <Copy size={14} style={{ color: 'var(--fs-text-muted)' }} />}
                       </button>
-                      <button onClick={() => setConfirmDialog({ isOpen: true, reportId: report.id, reportTitle: report.title })}
+                      <button onClick={() => setConfirmDialog({ isOpen: true, reportId: report.id || '', reportTitle: report.title || '' })}
                         className="p-1.5 rounded-lg transition-all"
                         style={{ transitionDuration: 'var(--fs-duration-fast)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = '#FEF2F2' }}

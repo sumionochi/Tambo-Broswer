@@ -9,10 +9,13 @@ import { BarChart3, TrendingUp, Code, Search, Loader, Sparkles } from 'lucide-re
 import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 import type { TamboComponent } from '@tambo-ai/react'
 
-export const AnalyticsGraphPropsSchema = z.object({
-  analysisType: z.enum(['search-trends', 'github-comparison', 'language-trends', 'source-analysis']).optional().describe("Type of analysis to perform"),
-  queries: z.array(z.string()).optional().describe("Topics or repositories to analyze"),
-})
+export const AnalyticsGraphPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    analysisType: z.enum(['search-trends', 'github-comparison', 'language-trends', 'source-analysis']).optional().nullable().describe("Type of analysis to perform"),
+    queries: z.array(z.string().nullable().default('')).optional().nullable().describe("Topics or repositories to analyze"),
+  })
+)
 
 type AnalyticsGraphProps = z.infer<typeof AnalyticsGraphPropsSchema>
 type AnalysisMode = 'search-trends' | 'github-comparison' | 'language-trends' | 'source-analysis'

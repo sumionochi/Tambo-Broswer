@@ -12,14 +12,20 @@ import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 // Zod Schema
 export const NotesPropsSchema = z.object({
-  notes: z.array(z.object({
-    id: z.string(),
-    content: z.string().describe("Note content"),
-    sourceSearch: z.string().optional().describe("Search query that created this note"),
-    linkedCollection: z.string().optional().describe("ID of linked collection"),
-    createdAt: z.string().describe("ISO datetime when note was created"),
-  }))
-})
+    notes: z.array(z.object({
+      id: z.string().nullable().default(''),
+      content: z.string().nullable().default('').describe("Note content"),
+      sourceSearch: z.string().optional().describe("Search query that created this note"),
+      linkedCollection: z.string().optional().describe("ID of linked collection"),
+      createdAt: z.string().nullable().default('').describe("ISO datetime when note was created"),
+    })).nullable().optional()
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pNotes = NotesPropsSchema.parse.bind(NotesPropsSchema);
+const _spNotes = NotesPropsSchema.safeParse.bind(NotesPropsSchema);
+(NotesPropsSchema as any).parse = (d: unknown, p?: any) => _pNotes(d ?? {}, p);
+(NotesPropsSchema as any).safeParse = (d: unknown, p?: any) => _spNotes(d ?? {}, p);
 
 type NotesProps = z.infer<typeof NotesPropsSchema>
 
@@ -83,7 +89,7 @@ function Notes({ notes: initialNotes }: NotesProps) {
   }
 
   const sortedNotes = [...safeNotes].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   )
 
   // ─── Loading ───
@@ -158,15 +164,15 @@ function Notes({ notes: initialNotes }: NotesProps) {
 
         {/* Notes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 fs-stagger">
-          {sortedNotes.map((note) => {
+          {sortedNotes.map((note, index) => {
             const isExpanded = expandedNote === note.id
             const isEditing = editingNote?.id === note.id
-            const preview = note.content.slice(0, 150)
-            const needsExpansion = note.content.length > 150
+            const preview = (note.content || '').slice(0, 150)
+            const needsExpansion = (note.content || '').length > 150
 
             return (
               <div
-                key={note.id}
+                key={note.id || index}
                 className="rounded-2xl p-5 transition-all fs-animate-in group"
                 style={{
                   background: 'var(--fs-cream-50)',
@@ -182,12 +188,12 @@ function Notes({ notes: initialNotes }: NotesProps) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fs-text-muted)' }}>
                     <FileText size={13} strokeWidth={1.8} />
-                    <span>{new Date(note.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{new Date(note.createdAt || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ transitionDuration: 'var(--fs-duration-normal)' }}>
                     {!isEditing && (
                       <button
-                        onClick={() => setEditingNote({ id: note.id, content: note.content })}
+                        onClick={() => setEditingNote({ id: note.id || '', content: note.content || '' })}
                         className="p-1.5 rounded-lg transition-all"
                         style={{ color: 'var(--fs-text-muted)', transitionDuration: 'var(--fs-duration-fast)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--fs-sage-600)'; e.currentTarget.style.background = 'var(--fs-sage-50)' }}
@@ -199,8 +205,8 @@ function Notes({ notes: initialNotes }: NotesProps) {
                     )}
                     <button
                       onClick={() => setConfirmDialog({
-                        isOpen: true, noteId: note.id,
-                        notePreview: note.content.slice(0, 50) + (note.content.length > 50 ? '...' : ''),
+                        isOpen: true, noteId: note.id || '',
+                        notePreview: (note.content || '').slice(0, 50) + ((note.content || '').length > 50 ? '...' : ''),
                       })}
                       className="p-1.5 rounded-lg transition-all"
                       style={{ color: 'var(--fs-text-muted)', transitionDuration: 'var(--fs-duration-fast)' }}
@@ -229,7 +235,7 @@ function Notes({ notes: initialNotes }: NotesProps) {
                     />
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => { if (editingNote.content.trim()) handleUpdateNote(note.id, editingNote.content.trim()) }}
+                        onClick={() => { if (editingNote.content.trim()) handleUpdateNote(note.id || '', editingNote.content.trim()) }}
                         className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-xl transition-all"
                         style={{ background: 'var(--fs-sage-600)', color: 'white', transitionDuration: 'var(--fs-duration-fast)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--fs-sage-700)' }}
@@ -251,12 +257,12 @@ function Notes({ notes: initialNotes }: NotesProps) {
                 ) : (
                   <>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed mb-3" style={{ color: 'var(--fs-text-secondary)' }}>
-                      {isExpanded ? note.content : preview}
+                      {isExpanded ? (note.content || '') : preview}
                       {needsExpansion && !isExpanded && '...'}
                     </p>
                     {needsExpansion && (
                       <button
-                        onClick={() => setExpandedNote(isExpanded ? null : note.id)}
+                        onClick={() => setExpandedNote(isExpanded ? null : (note.id || ''))}
                         className="text-sm font-medium transition-all"
                         style={{ color: 'var(--fs-sage-600)', transitionDuration: 'var(--fs-duration-fast)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--fs-sage-700)' }}

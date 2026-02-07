@@ -9,11 +9,14 @@ import {
   Code, Server, Database, Layers, GitBranch, Zap, FileText, Loader, ExternalLink, Sparkles
 } from 'lucide-react'
 
-export const GitHubArchitectureDiagramPropsSchema = z.object({
-  repoOwner: z.string().describe('Repository owner username'),
-  repoName: z.string().describe('Repository name'),
-  diagramType: z.enum(['architecture', 'file-tree', 'dependencies']).optional().describe('Type of diagram'),
-})
+export const GitHubArchitectureDiagramPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    repoOwner: z.string().nullable().optional().default('').describe('Repository owner username'),
+    repoName: z.string().nullable().optional().default('').describe('Repository name'),
+    diagramType: z.enum(['architecture', 'file-tree', 'dependencies']).optional().nullable().describe('Type of diagram'),
+  })
+)
 
 type GitHubArchitectureDiagramProps = z.infer<typeof GitHubArchitectureDiagramPropsSchema>
 
@@ -59,7 +62,7 @@ export function GitHubArchitectureDiagram({
   const isStreaming = !streamStatus.isSuccess && !streamStatus.isError
 
   useEffect(() => {
-    if (isStreaming) return
+    if (isStreaming || !repoOwner || !repoName) return
     const fetchRepoStructure = async () => {
       setLoading(true); setError(null)
       try {
@@ -72,7 +75,7 @@ export function GitHubArchitectureDiagram({
         setStructure(data)
       } catch (err: any) {
         setError(err.message || 'Analysis failed')
-        setStructure(generateMockStructure(repoOwner, repoName))
+        setStructure(generateMockStructure(repoOwner || '', repoName || ''))
       } finally { setLoading(false) }
     }
     fetchRepoStructure()
@@ -109,7 +112,7 @@ export function GitHubArchitectureDiagram({
         <div className="text-center fs-animate-in">
           <div className="inline-block w-10 h-10 rounded-full border-[3px] border-t-transparent animate-spin mb-4" style={{ borderColor: 'var(--fs-sage-200)', borderTopColor: 'transparent' }} />
           <p className="font-medium" style={{ color: 'var(--fs-text-primary)' }}>Fetching repository structure...</p>
-          <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>{repoOwner}/{repoName}</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>{repoOwner || '...'}/{repoName || '...'}</p>
         </div>
       </div>
     )
@@ -165,7 +168,7 @@ export function GitHubArchitectureDiagram({
 
                 return (
                   <div key={node.id}
-                    className={`relative ${index % 2 === 0 ? 'ml-0 mr-auto' : 'ml-auto mr-0'} w-full max-w-[26rem] fs-animate-in`}
+                    className={`relative ${index % 2 === 0 ? 'ml-0 mr-auto' : 'ml-auto mr-0'} w-full max-w-104 fs-animate-in`}
                     style={{ animationDelay: `${index * 80}ms` }}>
                     <div
                       onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)}

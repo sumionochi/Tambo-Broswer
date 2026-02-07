@@ -24,10 +24,13 @@ const Map = dynamic(
   }
 )
 
-export const LocationMapPropsSchema = z.object({
-  mode: z.enum(['place-search', 'city-explorer', 'saved-places', 'route-planner']).optional().describe("Type of map mode"),
-  searchQuery: z.string().optional().describe("Initial search query"),
-})
+export const LocationMapPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    mode: z.enum(['place-search', 'city-explorer', 'saved-places', 'route-planner']).optional().nullable().describe("Type of map mode"),
+    searchQuery: z.string().optional().nullable().describe("Initial search query"),
+  })
+)
 
 type LocationMapProps = z.infer<typeof LocationMapPropsSchema>
 type MapMode = 'place-search' | 'city-explorer' | 'saved-places' | 'route-planner'
@@ -51,7 +54,8 @@ function LocationMap({ mode: initialMode, searchQuery }: LocationMapProps) {
     if (!response.ok) throw new Error('Search failed')
     const data = await response.json()
     if (data.length === 0) throw new Error('No locations found')
-    const markers = data.map((place: any, i: number) => ({ lat: parseFloat(place.lat), lng: parseFloat(place.lon), label: place.display_name.split(',')[0], id: `marker-${i}` }))
+    const markers = data.map((place: any, i: number) => ({ lat: parseFloat(place.lat), lng: parseFloat(place.lon), label: place.display_name?.split(',')[0] || 'Unknown', id: `marker-${i}` }))
+    if (markers.length === 0) throw new Error('No locations found')
     setMapData({ title: `Search Results: "${query}"`, center: { lat: markers[0].lat, lng: markers[0].lng }, zoom: 12, markers })
   }
 

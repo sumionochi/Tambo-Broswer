@@ -11,18 +11,24 @@ import { EditWithTamboButton } from '@/components/tambo/edit-with-tambo-button'
 
 // Zod Schema
 export const CollectionsPropsSchema = z.object({
-  collections: z.array(z.object({
-    id: z.string(),
-    name: z.string().describe("Name of the collection"),
-    items: z.array(z.object({
-      id: z.string(),
-      type: z.enum(["article", "pin", "repo", "image"]).describe("Type of saved item"),
-      url: z.string().describe("URL of the item"),
-      thumbnail: z.string().optional().describe("Thumbnail image URL"),
-      title: z.string().describe("Title of the item"),
-    }))
-  }))
-})
+    collections: z.array(z.object({
+      id: z.string().nullable().default(''),
+      name: z.string().nullable().default('').describe("Name of the collection"),
+      items: z.array(z.object({
+        id: z.string().nullable().default(''),
+        type: z.enum(["article", "pin", "repo", "image"]).nullable().describe("Type of saved item"),
+        url: z.string().nullable().default('').describe("URL of the item"),
+        thumbnail: z.string().optional().describe("Thumbnail image URL"),
+        title: z.string().nullable().default('').describe("Title of the item"),
+      }))
+    })).nullable().optional()
+  })
+
+// Tambo-safe: handle undefined props during streaming
+const _pCollections = CollectionsPropsSchema.parse.bind(CollectionsPropsSchema);
+const _spCollections = CollectionsPropsSchema.safeParse.bind(CollectionsPropsSchema);
+(CollectionsPropsSchema as any).parse = (d: unknown, p?: any) => _pCollections(d ?? {}, p);
+(CollectionsPropsSchema as any).safeParse = (d: unknown, p?: any) => _spCollections(d ?? {}, p);
 
 type CollectionsProps = z.infer<typeof CollectionsPropsSchema>
 
@@ -226,11 +232,11 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
 
         {/* Collection Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 fs-stagger">
-          {safeCollections.map((collection) => {
+          {safeCollections.map((collection, index) => {
             const isExpanded = expandedCollection === collection.id
             return (
               <div
-                key={collection.id}
+                key={collection.id || index}
                 className="rounded-2xl p-5 transition-all fs-animate-in"
                 style={{
                   background: 'var(--fs-cream-50)',
@@ -251,14 +257,14 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
                       onChange={(e) => setEditingCollection({ ...editingCollection, name: e.target.value })}
                       onBlur={() => {
                         if (editingCollection.name.trim() && editingCollection.name !== collection.name) {
-                          handleRenameCollection(collection.id, editingCollection.name.trim())
+                          handleRenameCollection(collection.id || '', editingCollection.name.trim())
                         } else {
                           setEditingCollection(null)
                         }
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && editingCollection.name.trim()) {
-                          handleRenameCollection(collection.id, editingCollection.name.trim())
+                          handleRenameCollection(collection.id || '', editingCollection.name.trim())
                         } else if (e.key === 'Escape') {
                           setEditingCollection(null)
                         }
@@ -287,7 +293,7 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
                         </p>
                       </div>
                       <button
-                        onClick={() => setEditingCollection({ id: collection.id, name: collection.name })}
+                        onClick={() => setEditingCollection({ id: collection.id || '', name: collection.name || '' })}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg"
                         style={{ color: 'var(--fs-text-muted)', transitionDuration: 'var(--fs-duration-normal)' }}
                         title="Rename collection"
@@ -299,8 +305,8 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
                   <button
                     onClick={() => setConfirmDialog({
                       isOpen: true,
-                      collectionId: collection.id,
-                      collectionName: collection.name,
+                      collectionId: collection.id || '',
+                      collectionName: collection.name || '',
                     })}
                     className="p-1.5 rounded-lg transition-all ml-2"
                     style={{ color: 'var(--fs-text-muted)', transitionDuration: 'var(--fs-duration-fast)' }}
@@ -314,8 +320,8 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
 
                 {/* Preview Items */}
                 <div className="space-y-2">
-                  {collection.items.slice(0, 3).map((item) => (
-                    <CollectionItem key={item.id} item={item} />
+                  {collection.items.slice(0, 3).map((item, idx) => (
+                    <CollectionItem key={item.id || idx} item={item} />
                   ))}
 
                   {collection.items.length > 3 && (
@@ -340,13 +346,13 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
                   {/* Expanded items */}
                   {isExpanded && (
                     <div className="space-y-2 pt-1 fs-animate-in">
-                      {collection.items.slice(3).map((item) => (
-                        <div key={item.id} className="flex items-center gap-2">
+                      {collection.items.slice(3).map((item, idx) => (
+                        <div key={item.id || idx} className="flex items-center gap-2">
                           <div className="flex-1">
                             <CollectionItem item={item} />
                           </div>
                           <button
-                            onClick={() => handleDeleteItem(collection.id, item.id)}
+                            onClick={() => handleDeleteItem(collection.id || '', item.id || '')}
                             className="shrink-0 p-1 rounded-lg transition-all"
                             style={{ color: 'var(--fs-text-muted)', transitionDuration: 'var(--fs-duration-fast)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626' }}
@@ -383,8 +389,11 @@ function Collections({ collections: initialCollections }: CollectionsProps) {
 }
 
 /** Single collection item row */
-function CollectionItem({ item }: { item: { id: string; type: string; url: string; thumbnail?: string; title: string } }) {
-  const colors = typeColors[item.type] || typeColors.article
+function CollectionItem({ item }: { item: { id: string | null; type: string | null; url: string | null; thumbnail?: string; title: string | null } }) {
+  const safeType = item.type || 'article'
+  const safeTitle = item.title || 'Untitled'
+  const safeUrl = item.url || '#'
+  const colors = typeColors[safeType] || typeColors.article
   return (
     <div
       className="flex items-center gap-2.5 p-2.5 rounded-xl text-sm transition-all group"
@@ -398,7 +407,7 @@ function CollectionItem({ item }: { item: { id: string; type: string; url: strin
       {item.thumbnail ? (
         <img
           src={item.thumbnail}
-          alt={item.title}
+          alt={safeTitle}
           className="w-8 h-8 rounded-lg object-cover shrink-0"
           style={{ border: '1px solid var(--fs-border-light)' }}
         />
@@ -407,20 +416,20 @@ function CollectionItem({ item }: { item: { id: string; type: string; url: strin
           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold uppercase"
           style={{ background: colors.bg, color: colors.text }}
         >
-          {item.type.charAt(0)}
+          {safeType.charAt(0)}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="truncate font-medium" style={{ color: 'var(--fs-text-primary)', fontSize: 13 }}>{item.title}</p>
+        <p className="truncate font-medium" style={{ color: 'var(--fs-text-primary)', fontSize: 13 }}>{safeTitle}</p>
         <span
           className="text-[10px] font-semibold uppercase tracking-wider"
           style={{ color: colors.text }}
         >
-          {item.type}
+          {safeType}
         </span>
       </div>
       <a
-        href={item.url}
+        href={safeUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="shrink-0 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"

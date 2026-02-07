@@ -19,6 +19,63 @@ function generateItemId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+/** Map tool searchType → DB source field */
+function mapSearchTypeToSource(searchType: string): string {
+  switch (searchType) {
+    case "web":
+      return "google";
+    case "pexels":
+      return "pexels";
+    case "github":
+      return "github";
+    default:
+      return searchType;
+  }
+}
+
+/** Extract collection items from raw search results by index */
+function extractItemsFromResults(
+  searchResults: any[],
+  indices: number[],
+  searchType: string
+): CollectionItem[] {
+  return indices
+    .filter((index: number) => index >= 0 && index < searchResults.length)
+    .map((index: number) => {
+      const result = searchResults[index];
+
+      if (searchType === "web") {
+        return {
+          id: generateItemId(),
+          type: "article" as const,
+          url: result.url || result.link || "",
+          title: result.title || "Untitled",
+          thumbnail: result.thumbnail || result.imageUrl,
+        };
+      } else if (searchType === "pexels") {
+        return {
+          id: generateItemId(),
+          type: "image" as const,
+          url: result.url || result.src?.original || "",
+          title: result.title || result.alt || "Image",
+          thumbnail: result.imageUrl || result.src?.medium || result.src?.small,
+        };
+      } else if (searchType === "github") {
+        return {
+          id: generateItemId(),
+          type: "repo" as const,
+          url: result.url || result.html_url || "",
+          title: result.fullName || result.full_name || result.name || "Repo",
+          thumbnail: result.owner?.avatar_url,
+        };
+      }
+      return null;
+    })
+    .filter(
+      (item): item is NonNullable<typeof item> => item !== null
+    ) as CollectionItem[];
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -71,69 +128,76 @@ export async function POST(request: Request) {
       );
     }
     // ─── Path B: Search + indices from Tambo tools ───
+    //
+    // KEY FIX: Look up cached SearchSession first instead of re-searching.
+    //
+    // The search components (SearchResults, PexelsGrid, RepoExplorer) save
+    // their results to SearchSession when the user searches. Re-running the
+    // search gives DIFFERENT results (different ranking, API timing, etc.),
+    // so bookmarks would point to the wrong items.
+    //
+    // Flow: User sees results → says "bookmark first 3" → AI calls this tool
+    // → we look up the SAME results from the session → pick correct items.
+    //
     else if (
       body.searchQuery &&
       body.searchType &&
       Array.isArray(body.indices)
     ) {
       const { searchQuery, searchType, indices } = body;
+      const dbSource = mapSearchTypeToSource(searchType);
 
       console.log("📦 Search-based bookmark request:", {
         collectionName,
         searchQuery,
         searchType,
+        dbSource,
         indices,
       });
 
-      // Re-run the search to get results
       let searchResults: any[] = [];
 
-      if (searchType === "web") {
-        searchResults = await searchWeb(searchQuery);
-      } else if (searchType === "pexels") {
-        searchResults = await searchPexels(searchQuery);
-      } else if (searchType === "github") {
-        searchResults = await searchRepositories(searchQuery, { limit: 20 });
+      // Step 1: Try to find the cached session (most recent match)
+      try {
+        const session = await prisma.searchSession.findFirst({
+          where: {
+            userId: prismaUser.id,
+            query: searchQuery,
+            source: dbSource,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (session && Array.isArray(session.results)) {
+          searchResults = session.results as any[];
+          console.log(
+            `✅ Found cached session (${session.id}) with ${searchResults.length} results`
+          );
+        }
+      } catch (sessionError) {
+        console.warn(
+          "⚠️ Session lookup failed, will fall back to re-search:",
+          sessionError
+        );
       }
 
-      console.log(`✅ Re-searched and got ${searchResults.length} results`);
+      // Step 2: Fallback — re-search ONLY if no cached session found
+      if (searchResults.length === 0) {
+        console.log("⚠️ No cached session found, falling back to re-search");
 
-      // Extract items at specified indices
-      itemsToAdd = indices
-        .filter((index: number) => index >= 0 && index < searchResults.length)
-        .map((index: number) => {
-          const result = searchResults[index];
+        if (searchType === "web") {
+          searchResults = await searchWeb(searchQuery);
+        } else if (searchType === "pexels") {
+          searchResults = await searchPexels(searchQuery);
+        } else if (searchType === "github") {
+          searchResults = await searchRepositories(searchQuery, { limit: 20 });
+        }
 
-          if (searchType === "web") {
-            return {
-              id: generateItemId(),
-              type: "article" as const,
-              url: result.url,
-              title: result.title,
-              thumbnail: result.thumbnail,
-            };
-          } else if (searchType === "pexels") {
-            return {
-              id: generateItemId(),
-              type: "image" as const,
-              url: result.url,
-              title: result.title,
-              thumbnail: result.imageUrl,
-            };
-          } else if (searchType === "github") {
-            return {
-              id: generateItemId(),
-              type: "repo" as const,
-              url: result.url,
-              title: result.fullName || result.name,
-              thumbnail: undefined,
-            };
-          }
-          return null;
-        })
-        .filter(
-          (item: CollectionItem | null): item is CollectionItem => item !== null
-        );
+        console.log(`🔄 Re-searched and got ${searchResults.length} results`);
+      }
+
+      // Step 3: Extract items at specified indices from the results
+      itemsToAdd = extractItemsFromResults(searchResults, indices, searchType);
     }
     // ─── Neither path matched ───
     else {
@@ -180,7 +244,10 @@ export async function POST(request: Request) {
       data: { items: [...existingItems, ...itemsToAdd] },
     });
 
-    console.log(`✅ Added ${itemsToAdd.length} items to "${collectionName}"`);
+    console.log(
+      `✅ Added ${itemsToAdd.length} items to "${collectionName}":`,
+      itemsToAdd.map((i) => i.title)
+    );
 
     return NextResponse.json({
       success: true,

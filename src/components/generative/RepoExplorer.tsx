@@ -11,14 +11,17 @@ import {
 } from 'lucide-react'
 import { QuickActionDialog } from '@/components/dialog/QuickActionDialog'
 
-export const RepoExplorerPropsSchema = z.object({
-  searchRequest: z.object({
-    query: z.string().describe('Search query for repositories'),
-    language: z.string().optional().describe('Programming language filter'),
-    stars: z.number().optional().describe('Minimum stars filter'),
-    sort: z.enum(['stars', 'forks', 'updated']).optional().describe('Sort order'),
-  }).describe('GitHub repository search parameters'),
-})
+export const RepoExplorerPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    searchRequest: z.object({
+      query: z.string().nullable().default('').describe('Search query for repositories'),
+      language: z.string().optional().describe('Programming language filter'),
+      stars: z.number().optional().describe('Minimum stars filter'),
+      sort: z.enum(['stars', 'forks', 'updated']).optional().describe('Sort order'),
+    }).nullable().optional().describe('GitHub repository search parameters'),
+  })
+)
 
 type RepoExplorerProps = z.infer<typeof RepoExplorerPropsSchema>
 
@@ -143,7 +146,7 @@ export function RepoExplorer({ searchRequest }: RepoExplorerProps) {
           <Code size={28} style={{ color: 'var(--fs-sage-400)' }} strokeWidth={1.5} />
         </div>
         <p className="font-semibold text-lg" style={{ color: 'var(--fs-text-primary)', fontFamily: "'Fraunces', serif" }}>No repositories found</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search for &ldquo;{searchRequest.query}&rdquo;</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>Try a different search for &ldquo;{searchRequest?.query}&rdquo;</p>
       </div>
     )
   }
@@ -163,8 +166,8 @@ export function RepoExplorer({ searchRequest }: RepoExplorerProps) {
             </h3>
             <p className="text-sm mt-1" style={{ color: 'var(--fs-text-muted)' }}>
               Found <span className="font-semibold" style={{ color: 'var(--fs-text-primary)' }}>{repos.length}</span> repositories for{' '}
-              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest.query}&rdquo;</span>
-              {searchRequest.language && <span className="ml-1">in <span className="font-semibold" style={{ color: 'var(--fs-text-primary)' }}>{searchRequest.language}</span></span>}
+              <span className="font-semibold" style={{ color: 'var(--fs-sage-600)' }}>&ldquo;{searchRequest?.query}&rdquo;</span>
+              {searchRequest?.language && <span className="ml-1">in <span className="font-semibold" style={{ color: 'var(--fs-text-primary)' }}>{searchRequest?.language}</span></span>}
             </p>
           </div>
         </div>
@@ -191,7 +194,7 @@ export function RepoExplorer({ searchRequest }: RepoExplorerProps) {
 
                 {/* Trending Badge */}
                 {isTrending && (
-                  <div className="absolute -top-0 -right-0 z-10">
+                  <div className="absolute top-0 right-0 z-10">
                     <div className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-bl-xl flex items-center gap-1"
                       style={{ background: 'var(--fs-sage-600)', color: 'white' }}>
                       <TrendingUp size={10} /> Trending
@@ -201,7 +204,7 @@ export function RepoExplorer({ searchRequest }: RepoExplorerProps) {
 
                 {/* Top Match Badge */}
                 {isTop && (
-                  <div className="absolute -top-0 -left-0 z-10">
+                  <div className="absolute top-0 left-0 z-10">
                     <div className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-br-xl flex items-center gap-1"
                       style={{ background: 'var(--fs-sage-800)', color: 'white' }}>
                       <Award size={10} /> Top Match

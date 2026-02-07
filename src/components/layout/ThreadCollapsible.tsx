@@ -74,7 +74,7 @@ export function ThreadCollapsible({ collapsed, onToggle, userId }: ThreadCollaps
       <div className="flex-1 overflow-y-auto p-3 space-y-1.5 fs-scrollbar">
         {loading ? (
           <div className="text-center py-8">
-            <div className="inline-block w-6 h-6 rounded-full border-[2px] border-t-transparent animate-spin mb-3"
+            <div className="inline-block w-6 h-6 rounded-full border-2 border-t-transparent animate-spin mb-3"
               style={{ borderColor: 'var(--fs-sage-200)', borderTopColor: 'transparent' }} />
             <p className="text-xs" style={{ color: 'var(--fs-text-muted)' }}>Loading...</p>
           </div>

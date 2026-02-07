@@ -10,9 +10,12 @@ import {
   Table2, List, Type, Calendar, ExternalLink, Copy, CheckCircle2, Sparkles,
 } from 'lucide-react'
 
-export const DynamicReportPropsSchema = z.object({
-  reportId: z.string().describe('ID of the report to display'),
-})
+export const DynamicReportPropsSchema = z.preprocess(
+  (v) => v ?? {},
+  z.object({
+    reportId: z.string().nullable().optional().default('').describe('ID of the report to display'),
+  })
+)
 
 type DynamicReportProps = z.infer<typeof DynamicReportPropsSchema>
 

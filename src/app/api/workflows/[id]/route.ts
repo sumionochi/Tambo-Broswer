@@ -1,7 +1,8 @@
 // app/api/workflows/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
+import { ensureUserExists } from "@/lib/utils/sync-user";
 
 // DELETE /api/workflows/[id] — Delete a workflow and all its executions
 export async function DELETE(
@@ -9,10 +10,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromRequest();
-    if (!user) {
+    const supabase = await createClient();
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser();
+    if (!supabaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = await ensureUserExists(supabaseUser);
 
     const { id } = await params;
 

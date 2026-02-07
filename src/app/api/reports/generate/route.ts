@@ -1,16 +1,21 @@
 // app/api/reports/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
+import { ensureUserExists } from "@/lib/utils/sync-user";
 import { synthesizeReport } from "@/lib/workflow-engine";
 
 // POST /api/reports/generate — Generate report from workflow results or collection
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest();
-    if (!user) {
+    const supabase = await createClient();
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser();
+    if (!supabaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = await ensureUserExists(supabaseUser);
 
     const body = await request.json();
     const { workflowId, collectionId, reportType = "summary", title } = body;

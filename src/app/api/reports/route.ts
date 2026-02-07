@@ -1,15 +1,20 @@
 // app/api/reports/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
+import { ensureUserExists } from "@/lib/utils/sync-user";
 
 // GET /api/reports — List all reports for the user
 export async function GET() {
   try {
-    const user = await getUserFromRequest();
-    if (!user) {
+    const supabase = await createClient();
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser();
+    if (!supabaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = await ensureUserExists(supabaseUser);
 
     const reports = await prisma.report.findMany({
       where: { userId: user.id },
@@ -23,7 +28,6 @@ export async function GET() {
         workflowId: true,
         createdAt: true,
         updatedAt: true,
-        // Include section count for UI display
         sections: true,
       },
     });

@@ -22,8 +22,8 @@ interface SearchHistoryDialogProps {
 export function SearchHistoryDialog({ isOpen, onClose, searchQuery }: SearchHistoryDialogProps) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [fromCache, setFromCache] = useState(false)
 
-  // Load results when dialog opens - FIXED: useEffect instead of useState
   useEffect(() => {
     if (isOpen && searchQuery) {
       loadSearchResults()
@@ -32,25 +32,44 @@ export function SearchHistoryDialog({ isOpen, onClose, searchQuery }: SearchHist
 
   const loadSearchResults = async () => {
     setLoading(true)
-    setResults([]) // Clear previous results
-    
+    setResults([])
+    setFromCache(false)
+
     try {
-      console.log('🔍 Loading search results for:', searchQuery)
-      
+      console.log('🔍 Loading saved results for:', searchQuery)
+
+      // Try saved session first (no API quota used)
+      const sessionRes = await fetch(
+        `/api/search-sessions?query=${encodeURIComponent(searchQuery)}&source=google`
+      )
+
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json()
+
+        if (sessionData.results && sessionData.results.length > 0) {
+          console.log('✅ Loaded', sessionData.results.length, 'results from saved session')
+          setResults(sessionData.results)
+          setFromCache(true)
+          return
+        }
+      }
+
+      // Fallback: run a live search only if no saved session exists
+      console.log('⚠️ No saved session found, running live search')
       const response = await fetch('/api/search/web', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          searchRequest: { 
+        body: JSON.stringify({
+          searchRequest: {
             query: searchQuery,
-            num: 10
-          } 
+            num: 10,
+          },
         }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Loaded', data.results?.length || 0, 'results')
+        console.log('✅ Live search returned', data.results?.length || 0, 'results')
         setResults(data.results || [])
       } else {
         console.error('❌ Search failed:', response.status)
@@ -65,19 +84,19 @@ export function SearchHistoryDialog({ isOpen, onClose, searchQuery }: SearchHist
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
-      onClick={onClose} // Click backdrop to close
+      onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold text-gray-900">Search Results</h2>
-            <p className="text-sm text-gray-600 mt-1 truncate">"{searchQuery}"</p>
+            <p className="text-sm text-gray-600 mt-1 truncate">&quot;{searchQuery}&quot;</p>
           </div>
           <button
             onClick={onClose}
@@ -137,7 +156,14 @@ export function SearchHistoryDialog({ isOpen, onClose, searchQuery }: SearchHist
         {/* Footer */}
         <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
           <p className="text-sm text-gray-600">
-            {results.length > 0 && `Showing ${results.length} results`}
+            {results.length > 0 && (
+              <>
+                Showing {results.length} results
+                {fromCache && (
+                  <span className="text-gray-400 ml-1">(saved)</span>
+                )}
+              </>
+            )}
           </p>
           <button
             onClick={onClose}

@@ -1,12 +1,12 @@
 // app/api/collections/[id]/items/[itemId]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserExists } from "@/lib/utils/sync-user";
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string; itemId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -19,10 +19,11 @@ export async function DELETE(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id, itemId } = await params;
 
     // Verify ownership
     const collection = await prisma.collection.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!collection) {
@@ -38,14 +39,14 @@ export async function DELETE(
 
     // Remove item from collection
     const items = (collection.items as any[]) || [];
-    const updatedItems = items.filter((item: any) => item.id !== params.itemId);
+    const updatedItems = items.filter((item: any) => item.id !== itemId);
 
     await prisma.collection.update({
-      where: { id: params.id },
+      where: { id },
       data: { items: updatedItems as any },
     });
 
-    console.log("🗑️ Deleted item from collection:", params.itemId);
+    console.log("🗑️ Deleted item from collection:", itemId);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

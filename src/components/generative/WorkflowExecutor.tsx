@@ -214,7 +214,7 @@ export function WorkflowExecutor({ workflowId, steps: initialSteps }: WorkflowEx
   return (
     <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
       {/* ── Header ── */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-5">
+      <div className="bg-linear-to-r from-blue-600 to-purple-600 px-6 py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">

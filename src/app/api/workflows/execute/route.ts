@@ -1,17 +1,22 @@
 // app/api/workflows/execute/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
+import { ensureUserExists } from "@/lib/utils/sync-user";
 import { planWorkflowSteps } from "@/lib/workflow-engine";
 import { matchTemplate, buildFromTemplate } from "@/lib/workflow-templates";
 
 // POST /api/workflows/execute — Create and start a workflow
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest();
-    if (!user) {
+    const supabase = await createClient();
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser();
+    if (!supabaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = await ensureUserExists(supabaseUser);
 
     const body = await request.json();
     const {

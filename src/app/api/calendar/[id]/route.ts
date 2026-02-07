@@ -1,12 +1,12 @@
 // app/api/calendar/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserExists } from "@/lib/utils/sync-user";
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -19,10 +19,11 @@ export async function DELETE(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
 
     // Verify ownership
     const event = await prisma.calendarEvent.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!event) {
@@ -35,10 +36,10 @@ export async function DELETE(
 
     // Delete event
     await prisma.calendarEvent.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    console.log("🗑️ Deleted calendar event:", params.id);
+    console.log("🗑️ Deleted calendar event:", id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -50,10 +51,9 @@ export async function DELETE(
   }
 }
 
-// ✨ NEW: PATCH endpoint for updating events
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -66,11 +66,12 @@ export async function PATCH(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
     const body = await request.json();
 
     // Verify ownership
     const event = await prisma.calendarEvent.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!event) {
@@ -83,7 +84,7 @@ export async function PATCH(
 
     // Update event
     const updatedEvent = await prisma.calendarEvent.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(body.title !== undefined && { title: body.title }),
         ...(body.datetime !== undefined && {
@@ -97,7 +98,7 @@ export async function PATCH(
       },
     });
 
-    console.log("✏️ Updated calendar event:", params.id);
+    console.log("✏️ Updated calendar event:", id);
 
     return NextResponse.json({
       success: true,

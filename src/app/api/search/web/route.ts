@@ -23,11 +23,22 @@ export async function POST(request: Request) {
     // Search
     const results = await searchWeb(query, filters);
 
-    // Save search history if user is authenticated
+    // Save search history + session if user is authenticated
     if (supabaseUser) {
       try {
         const prismaUser = await ensureUserExists(supabaseUser);
 
+        // Save exact results for later retrieval (SearchHistoryDialog)
+        await prisma.searchSession.create({
+          data: {
+            userId: prismaUser.id,
+            query,
+            source: "google",
+            results: results as any,
+          },
+        });
+
+        // Also save to SearchHistory for the history list
         await prisma.searchHistory.create({
           data: {
             userId: prismaUser.id,
@@ -38,7 +49,7 @@ export async function POST(request: Request) {
           },
         });
 
-        console.log("✅ Saved search history:", query);
+        console.log("✅ Saved search history + session:", query);
       } catch (historyError) {
         // Don't fail the search if history save fails
         console.error("Failed to save search history:", historyError);

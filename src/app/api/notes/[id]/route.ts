@@ -1,12 +1,12 @@
 // app/api/notes/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserExists } from "@/lib/utils/sync-user";
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -19,10 +19,11 @@ export async function DELETE(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
 
     // Verify ownership
     const note = await prisma.note.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!note) {
@@ -35,10 +36,10 @@ export async function DELETE(
 
     // Delete note
     await prisma.note.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    console.log("🗑️ Deleted note:", params.id);
+    console.log("🗑️ Deleted note:", id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -50,10 +51,9 @@ export async function DELETE(
   }
 }
 
-// ✨ NEW: PATCH endpoint for updating note content
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -66,11 +66,12 @@ export async function PATCH(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
     const body = await request.json();
 
     // Verify ownership
     const note = await prisma.note.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!note) {
@@ -83,7 +84,7 @@ export async function PATCH(
 
     // Update note
     const updatedNote = await prisma.note.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(body.content !== undefined && { content: body.content }),
         ...(body.sourceSearch !== undefined && {
@@ -95,7 +96,7 @@ export async function PATCH(
       },
     });
 
-    console.log("✏️ Updated note:", params.id);
+    console.log("✏️ Updated note:", id);
 
     return NextResponse.json({
       success: true,

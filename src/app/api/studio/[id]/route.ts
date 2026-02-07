@@ -1,12 +1,12 @@
 // app/api/studio/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserExists } from "@/lib/utils/sync-user";
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -19,10 +19,11 @@ export async function DELETE(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
 
     // Verify ownership
     const image = await prisma.generatedImage.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!image) {
@@ -35,10 +36,10 @@ export async function DELETE(
 
     // Delete image
     await prisma.generatedImage.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    console.log("🗑️ Deleted generated image:", params.id);
+    console.log("🗑️ Deleted generated image:", id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

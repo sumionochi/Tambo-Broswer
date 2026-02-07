@@ -1,12 +1,12 @@
 // app/api/collections/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserExists } from "@/lib/utils/sync-user";
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -19,10 +19,11 @@ export async function DELETE(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
 
     // Verify ownership
     const collection = await prisma.collection.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!collection) {
@@ -38,10 +39,10 @@ export async function DELETE(
 
     // Delete collection
     await prisma.collection.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    console.log("🗑️ Deleted collection:", params.id);
+    console.log("🗑️ Deleted collection:", id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -53,10 +54,9 @@ export async function DELETE(
   }
 }
 
-// ✨ NEW: PATCH endpoint for updating collection name
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -69,11 +69,12 @@ export async function PATCH(
     }
 
     const prismaUser = await ensureUserExists(supabaseUser);
+    const { id } = await params;
     const body = await request.json();
 
     // Verify ownership
     const collection = await prisma.collection.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!collection) {
@@ -89,13 +90,13 @@ export async function PATCH(
 
     // Update collection
     const updatedCollection = await prisma.collection.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(body.name !== undefined && { name: body.name }),
       },
     });
 
-    console.log("✏️ Updated collection:", params.id);
+    console.log("✏️ Updated collection:", id);
 
     return NextResponse.json({
       success: true,

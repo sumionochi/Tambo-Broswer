@@ -251,7 +251,7 @@ export function DynamicReport({ reportId }: DynamicReportProps) {
   return (
     <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
       {/* ── Header ── */}
-      <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-6 border-b border-gray-200">
+      <div className="bg-linear-to-r from-gray-50 to-white px-6 py-6 border-b border-gray-200">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">

@@ -204,7 +204,7 @@ export function NavigationBar({ activeView, onViewChange, userEmail }: Navigatio
                 className="text-[10px] font-medium uppercase tracking-widest truncate"
                 style={{ color: 'var(--fs-text-muted)' }}
               >
-                Research OS
+                Search Engine
               </p>
             </div>
           )}
